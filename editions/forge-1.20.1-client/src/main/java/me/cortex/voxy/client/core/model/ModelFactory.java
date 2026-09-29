@@ -45,6 +45,7 @@ import net.minecraftforge.registries.ForgeRegistries;
 
 import java.lang.invoke.VarHandle;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -114,6 +115,7 @@ public class ModelFactory {
     private final List<Pair<Integer, BlockState>> modelsRequiringBiomeColours = new ArrayList<>();
 
     private static final ObjectSet<BlockState> LOGGED_SELF_CULLING_WARNING = new ObjectOpenHashSet<>();
+    private static final Set<Block> LOGGED_BROKEN_COLOUR_PROVIDERS = ConcurrentHashMap.newKeySet();
 
     private final Mapper mapper;
     private final ModelStore storage;
@@ -443,13 +445,27 @@ public class ModelFactory {
         var colourProvider = getColourProvider(blockState.getBlock());
 
         boolean isBiomeColourDependent = false;
+        int constantTint = -1;
         if (colourProvider != null) {
-            isBiomeColourDependent = isBiomeDependentColour(colourProvider, blockState);
+            try {
+                isBiomeColourDependent = isBiomeDependentColour(colourProvider, blockState);
+                if (!isBiomeColourDependent) {
+                    constantTint = captureColourConstant(colourProvider, blockState, DEFAULT_BIOME) | 0xFF000000;
+                }
+            } catch (RuntimeException e) {
+                // Some third-party color providers only support real worlds or
+                // particular block states. Their failure must not abort all LODs.
+                if (LOGGED_BROKEN_COLOUR_PROVIDERS.add(blockState.getBlock())) {
+                    Logger.warn("Ignoring broken block color provider for", BuiltInRegistries.BLOCK.getKey(blockState.getBlock()), e);
+                }
+                colourProvider = null;
+                isBiomeColourDependent = false;
+            }
         }
 
         ModelEntry entry;
         {//Deduplicate same entries
-            entry = new ModelEntry(textureData, clientFluidStateId, isBiomeColourDependent||colourProvider==null?-1:captureColourConstant(colourProvider, blockState, DEFAULT_BIOME)|0xFF000000, leafModel, me.cortex.voxy.client.compat.distant.TrackLodReplacement.isTrack(blockState));
+            entry = new ModelEntry(textureData, clientFluidStateId, constantTint, leafModel, me.cortex.voxy.client.compat.distant.TrackLodReplacement.isTrack(blockState));
             int possibleDuplicate = this.modelTexture2id.getInt(entry);
             if (possibleDuplicate != -1) {//Duplicate found
                 this.idMappings[blockId] = possibleDuplicate;
@@ -927,9 +943,22 @@ public class ModelFactory {
                 return Minecraft.getInstance().level.getShade(direction, bl);
             }
         };
-        int c = colorProvider.getColor(state, getter, BlockPos.ZERO, 0);
+        // TFC grass colors are climate-dependent and ignore this synthetic getter.
+        // Sampling the world origin during an asynchronous model bake can return
+        // black when the client level is unavailable. TFC supplies a stable
+        // default grass color when the position is null (also used for items).
+        BlockPos samplePos = isTfcGrass(state) ? null : BlockPos.ZERO;
+        int c = colorProvider.getColor(state, getter, samplePos, 0);
         if (c!=-1) return c;
-        return colorProvider.getColor(state, getter, BlockPos.ZERO, 1);
+        return colorProvider.getColor(state, getter, samplePos, 1);
+    }
+
+    private static boolean isTfcGrass(BlockState state) {
+        ResourceLocation id = BuiltInRegistries.BLOCK.getKey(state.getBlock());
+        if (!"tfc".equals(id.getNamespace())) return false;
+        String path = id.getPath();
+        return path.startsWith("grass/") || path.startsWith("clay_grass/")
+                || path.equals("peat_grass") || path.equals("kaolin_clay_grass");
     }
 
     public static boolean isLeafBlockState(BlockState state) {

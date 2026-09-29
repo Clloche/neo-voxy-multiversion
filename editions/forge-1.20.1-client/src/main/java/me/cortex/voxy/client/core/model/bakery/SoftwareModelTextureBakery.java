@@ -116,25 +116,36 @@ public class SoftwareModelTextureBakery {
         // into the LOD atlas for some modded leaf textures.
         boolean forceSolidLeaf = ModelFactory.isLeafBlockState(state)
                 && VoxyConfig.CONFIG.getLeafLodMode() == VoxyConfig.LeafLodMode.FAST;
+        // Forge baked models can render on a different layer from the legacy
+        // ItemBlockRenderTypes mapping. TFC connected grass is one such model:
+        // asking it for SOLID quads returns no faces at all. Use the model's
+        // advertised layers, as Forge's normal chunk renderer does.
+        List<RenderType> modelLayers = new ArrayList<>();
+        for (RenderType modelLayer : model.getRenderTypes(state, new SingleThreadedRandomSource(42L), ModelData.EMPTY)) {
+            modelLayers.add(modelLayer);
+        }
+        if (modelLayers.isEmpty()) modelLayers.add(layer);
         boolean crossCandidate = true;
         int diagonalFamilies = 0;
         int unculledQuads = 0;
-        for (Direction direction : new Direction[] { Direction.DOWN, Direction.UP, Direction.NORTH, Direction.SOUTH,
-                Direction.WEST, Direction.EAST, null }) {
-            var quads = model.getQuads(state, direction, new SingleThreadedRandomSource(42L),
-                    ModelData.EMPTY, layer);
-            if (direction != null && !quads.isEmpty()) crossCandidate = false;
-            for (var quad : quads) {
-                if (direction == null && crossCandidate) {
-                    int family = classifyGroundCrossQuad(quad.getVertices());
-                    if (family == 0) crossCandidate = false;
-                    else {
-                        diagonalFamilies |= family;
-                        unculledQuads++;
+        for (RenderType modelLayer : modelLayers) {
+            for (Direction direction : new Direction[] { Direction.DOWN, Direction.UP, Direction.NORTH, Direction.SOUTH,
+                    Direction.WEST, Direction.EAST, null }) {
+                var quads = model.getQuads(state, direction, new SingleThreadedRandomSource(42L),
+                        ModelData.EMPTY, modelLayer);
+                if (direction != null && !quads.isEmpty()) crossCandidate = false;
+                for (var quad : quads) {
+                    if (direction == null && crossCandidate) {
+                        int family = classifyGroundCrossQuad(quad.getVertices());
+                        if (family == 0) crossCandidate = false;
+                        else {
+                            diagonalFamilies |= family;
+                            unculledQuads++;
+                        }
                     }
+                    (modelLayer == RenderType.translucent() ? this.translucentVC : this.opaqueVC)
+                            .quad(quad, forceSolidLeaf, modelLayer);
                 }
-                (layer == RenderType.translucent() ? this.translucentVC : this.opaqueVC)
-                        .quad(quad, forceSolidLeaf, layer);
             }
         }
         return crossCandidate && unculledQuads >= 2 && diagonalFamilies == 0b11;
