@@ -166,13 +166,9 @@ public class ModelFactory {
 
         var blockState = this.mapper.getBlockStateFromBlockId(blockId);
         if (blockState.getBlock() instanceof StairBlock sb) {
-                /*
-                if (sb.baseState.hasProperty(BlockStateProperties.WATERLOGGED)) {
-                    blockState = sb.baseState.setValue(BlockStateProperties.WATERLOGGED, blockState.getValue(BlockStateProperties.WATERLOGGED));
-                } else {
-                    blockState = sb.baseState;
-                }*/
-            blockState = sb.baseState.getBlock().withPropertiesOf(blockState);
+            // Forge resolves supplier-backed stairs through this getter. Keep baseState
+            // private so Forge's field-to-method transformer can redirect its accesses.
+            blockState = sb.getModelState().getBlock().withPropertiesOf(blockState);
         }
 
         //We do this first so that it is always guarenteed that fluid models are ordered before the block models
