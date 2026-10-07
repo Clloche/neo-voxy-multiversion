@@ -43,6 +43,18 @@ public class MixinFogRenderer {
 
         if (RenderSystem.getShaderFogEnd() < 10.0f) return;
 
+
+        // Another mod (e.g. Dynamic Surroundings biome/morning fog) pulled the fog in closer than
+        // vanilla's render-distance fog: keep it instead of pushing it to infinity.
+        float vanillaFar = Math.min(viewDistance,
+                net.minecraft.client.Minecraft.getInstance().options.getEffectiveRenderDistance() * 16.0f);
+        boolean externalFog = RenderSystem.getShaderFogEnd() < vanillaFar * 0.9f;
+        if (fogMode == FogMode.FOG_TERRAIN) {
+            me.cortex.voxy.client.core.VoxyRenderSystem.setExternalFogActive(externalFog);
+        }
+        if (externalFog) return;
+        
+
         // Adjust sky fog so it always looks smooth and doesn't change with render distance
         if (fogMode == FogMode.FOG_SKY) {
             RenderSystem.setShaderFogStart(0);
