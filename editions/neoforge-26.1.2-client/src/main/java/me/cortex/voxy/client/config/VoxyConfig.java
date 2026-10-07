@@ -170,7 +170,7 @@ public class VoxyConfig {
     // ---- 范围校验 ------------------------------------------------------
 
     public void sanitize() {
-        this.sectionRenderDistance = Math.clamp(this.sectionRenderDistance, 2.0F, 64.0F);
+        this.sectionRenderDistance = Math.clamp(this.sectionRenderDistance, 0.625F, 64.0F);
         this.subDivisionSize = Math.clamp(this.subDivisionSize, MIN_SUBDIVISION_SIZE, MAX_SUBDIVISION_SIZE);
         this.skyFogDistance = Math.clamp(this.skyFogDistance, 0, 1024);
         this.fogIntensity = Math.clamp(this.fogIntensity, 0.0F, 1.0F);

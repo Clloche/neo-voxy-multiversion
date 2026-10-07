@@ -237,7 +237,7 @@ public class VoxyConfig {
         this.cmdListHoldMaxFrames = Math.clamp(this.cmdListHoldMaxFrames, 2, 60);
         this.sectionArrayPoolMiB = Math.clamp(this.sectionArrayPoolMiB, 25, 1024);
         WorldSection.setArrayPoolCapMiB(this.sectionArrayPoolMiB);
-        this.sectionRenderDistance = Math.clamp(this.sectionRenderDistance, 2.0f, 64.0f);
+        this.sectionRenderDistance = Math.clamp(this.sectionRenderDistance, 0.625f, 64.0f);
         this.setRenderQualityLevel(this.getRenderQualityLevel());
         this.requestDistance = Math.clamp(this.requestDistance, MIN_REQUEST_DISTANCE, MAX_REQUEST_DISTANCE);
         // Older builds measured this percentage against one sixteenth of the LOD radius.

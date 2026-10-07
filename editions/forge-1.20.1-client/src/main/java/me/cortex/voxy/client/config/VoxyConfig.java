@@ -179,7 +179,7 @@ public class VoxyConfig
     }
 
     public void sanitize() {
-        this.sectionRenderDistance = clamp(this.sectionRenderDistance, 2.0f, 64.0f);
+        this.sectionRenderDistance = clamp(this.sectionRenderDistance, 0.625f, 64.0f);
         this.subDivisionSize = clamp(this.subDivisionSize, MIN_SUBDIVISION_SIZE, MAX_SUBDIVISION_SIZE);
         this.skyFogDistance = clamp(this.skyFogDistance, 0, 1024);
         this.fogIntensity = clamp(this.fogIntensity, 0.0f, 1.0f);
