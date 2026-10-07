@@ -298,7 +298,17 @@ public class VoxyRenderSystem {
                 && (living.hasEffect(MobEffects.BLINDNESS)
                     || living.hasEffect(MobEffects.DARKNESS));
     }
-
+    // True when the terrain fog set by vanilla/other mods is closer than the render distance
+    // (Dynamic Surroundings swamp/morning fog, thick fog...). Voxy then keeps that fog and
+    // applies it to the LODs too.
+    private static volatile boolean externalFogActive;
+    public static void setExternalFogActive(boolean active) {
+        externalFogActive = active;
+    }
+    public static boolean externalFogActive() {
+        return externalFogActive;
+    }
+    
     private static volatile float lastRenderFogEnd = -1;
     private static volatile float lastRenderVanillaFar = -1;
     private static volatile boolean lastRenderSkipped;
