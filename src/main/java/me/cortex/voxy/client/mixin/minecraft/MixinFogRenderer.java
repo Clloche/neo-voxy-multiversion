@@ -17,7 +17,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import com.mojang.blaze3d.systems.RenderSystem;
 
-@Mixin(value = FogRenderer.class, remap = true)
+@Mixin(value = FogRenderer.class, remap = true, priority = 2000)
 public class MixinFogRenderer {
     @Inject(
         method = "setupFog(Lnet/minecraft/client/Camera;Lnet/minecraft/client/renderer/FogRenderer$FogMode;FZF)V",
