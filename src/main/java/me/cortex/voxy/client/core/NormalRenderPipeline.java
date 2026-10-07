@@ -107,8 +107,9 @@ public class NormalRenderPipeline extends AbstractRenderPipeline {
         float mediumFar = VoxyRenderSystem.getTerrainFogEndAtRender();
         var mc = net.minecraft.client.Minecraft.getInstance();
         boolean inMedium = mc.gameRenderer != null
-                && mc.gameRenderer.getMainCamera().getFluidInCamera()
-                    != net.minecraft.world.level.material.FogType.NONE
+                && (mc.gameRenderer.getMainCamera().getFluidInCamera()
+                        != net.minecraft.world.level.material.FogType.NONE
+                    || VoxyRenderSystem.externalFogActive())
                 && mediumFar > mediumNear;
         if (inMedium) {
             float[] fogColor = RenderSystem.getShaderFogColor();
