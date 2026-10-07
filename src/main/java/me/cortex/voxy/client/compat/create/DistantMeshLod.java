@@ -96,8 +96,7 @@ public final class DistantMeshLod {
     }
 
     public static double visibilityPixels(float subdivision) {
-        if (!Float.isFinite(subdivision) || subdivision <= 0) subdivision = 256;
-        return Math.clamp(Math.sqrt(subdivision / 256.0) * 0.5, 0.125, 1.0);
+        return me.cortex.voxy.client.core.rendering.NativeLodSelection.visibilityPixels(subdivision);
     }
 
     /** 只有整个包围盒小于阈值才剔除，长条玻璃、轨道和光柱不能按面积消失。 */

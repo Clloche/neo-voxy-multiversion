@@ -129,7 +129,7 @@ public final class DistantMeshGpuVerification {
                 var m=new org.joml.Matrix4f(projection).translate(-.5f,-.5f,-9000);
                 selection.update(projection,projection,width,width*9/16,0,0,0,256,64);
                 glUniformMatrix4fv(0,false,m.get(matrix));
-                DistantMesh.beginFrame(256,64);
+                DistantMesh.beginFrame();
                 glBeginQuery(GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN,query);
                 glBeginTransformFeedback(GL_TRIANGLES);
                 mesh.drawAt(selection,-.5,-.5,-9000);
@@ -143,17 +143,21 @@ public final class DistantMeshGpuVerification {
             }
         }
         // 透明网格缩小时剔除、放大时恢复原始索引顺序与逐顶点颜色/透明度。
+        for (float quality : new float[]{28,256,1024})
+        for (float nearDetail : new float[]{64,8192})
         for (float fov : new float[]{70,7,70,7}) {
             var m=new org.joml.Matrix4f().perspective((float)Math.toRadians(fov),16f/9,.1f,50000)
                     .translate(-.5f,-.5f,-4096);
             glUniformMatrix4fv(0,false,m.get(matrix));
-            DistantMesh.beginFrame(256,64);
+            selection.update(m,m,1920,1080,0,0,0,quality,nearDetail);
+            DistantMesh.beginFrame();
             glBeginQuery(GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN,query);
             glBeginTransformFeedback(GL_TRIANGLES);
-            mesh.drawTranslucent(m,1920,1080);
+            mesh.drawTranslucent(selection,m,1920,1080);
             glEndTransformFeedback(); glEndQuery(GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN);
             int triangles=glGetQueryObjecti(query,GL_QUERY_RESULT);
-            if (triangles!=(fov==70?0:8192)) throw new AssertionError("Transparent zoom visibility");
+            boolean subpixel = fov == 70 && quality >= 256 && nearDetail == 64;
+            if (triangles!=(subpixel?0:8192)) throw new AssertionError("Transparent subdivision/zoom/near visibility");
             checks++;
             if (triangles==0) continue;
             float[] result=new float[triangles*3*9];
@@ -244,7 +248,7 @@ public final class DistantMeshGpuVerification {
                     int expectedLevel = 0;
                     while (terrainLevel>0 && expectedLevel<lod.grids.length && lod.grids[expectedLevel]<=(1<<terrainLevel)) expectedLevel++;
                     for (boolean moving : new boolean[]{false,true}) {
-                        DistantMesh.beginFrame(256,256);
+                        DistantMesh.beginFrame();
                         glBeginQuery(GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN,query);
                         glBeginTransformFeedback(GL_TRIANGLES);
                         if (moving) mesh.drawModel(nativeLod,local,0,0,0); else mesh.drawAt(nativeLod,0,0,-512);

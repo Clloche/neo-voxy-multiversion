@@ -25,6 +25,10 @@ public final class NativeLodSelectionVerification {
         int previous = 0;
         for (float quality : new float[]{28,64,123,256,512,768,1024}) {
             selection.update(projection,projection,1920,1080,0,0,0,quality,256);
+            expect(selection.visibilityPixels == NativeLodSelection.visibilityPixels(quality),
+                    "Transparent visibility must use the terrain subdivision snapshot");
+            expect(selection.fullDetailDistance == 256 && selection.fullDetailDistanceSquared == 65536,
+                    "Transparent and terrain near-detail ranges disagree");
             int level = selection.level(-16,-16,-1024,16,16,-1008);
             expect(level>=previous,"Lower quality refined geometry");
             previous=level;
@@ -56,6 +60,13 @@ public final class NativeLodSelectionVerification {
         selection.update(projection,projection,1920,1080,0,0,0,256,256);
         expect(selection.level(-1e20,-1e20,-1e20,1e20,1e20,1e20)==0,"Huge mesh must obey traversal budget");
         expect(selection.level(Double.NaN,0,0,1,1,1)==0,"Invalid mesh must keep full detail");
+        selection.update(projection,projection,1920,1080,0,0,0,1024,64);
+        var otherView = new NativeLodSelection();
+        otherView.update(projection,projection,1920,1080,0,0,0,28,128);
+        expect(selection.visibilityPixels == 1 && selection.fullDetailDistance == 64,
+                "Another viewport changed the subdivision snapshot");
+        expect(otherView.visibilityPixels < selection.visibilityPixels && otherView.fullDetailDistance == 128,
+                "Independent viewport failed to select its own detail");
         System.out.println("Passed "+checks+" native section LOD checks");
     }
 

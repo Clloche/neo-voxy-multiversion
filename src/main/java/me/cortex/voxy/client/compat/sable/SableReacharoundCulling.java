@@ -43,7 +43,7 @@ public final class SableReacharoundCulling {
 
         var target = Minecraft.getInstance().getMainRenderTarget();
         float subdivision = VoxyConfig.CONFIG.subDivisionSize;
-        double nearDetail = (vanillaRenderDistanceChunks + 2) * 16.0;
+        double nearDetail = (Minecraft.getInstance().options.renderDistance().get() + 2) * 16.0;
         boolean shadow = IrisUtil.irisShadowActive();
         boolean projected = !shadow && modelView != null && projection != null;
         if (projected) MVP.set(projection).mul(modelView);

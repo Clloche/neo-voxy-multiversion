@@ -151,13 +151,16 @@ public final class TerrainLodGpuVerification {
             nodes[i*4+2]=-2-random.nextInt(120);
             nodes[i*4+3]=1+random.nextInt(4);
         }
+        java.util.Arrays.fill(nodes, 0, 4, 0);
+        nodes[3] = 1;
         glNamedBufferData(input,nodes,GL_STATIC_DRAW); glNamedBufferData(output,count*4L,GL_STREAM_READ);
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER,0,output); glBindBufferBase(GL_SHADER_STORAGE_BUFFER,2,input);
         glUseProgram(program);
         var cpu=new NativeLodSelection();
+        for (float nearDetail : new float[]{0,256})
         for (float fov : new float[]{110,70,30,7}) for (float quality : new float[]{28,123,256,1024}) {
             var projection=new Matrix4f().perspective((float)Math.toRadians(fov),16f/9,.1f,50000);
-            cpu.update(projection,projection,1920,1080,0,0,0,quality,256);
+            cpu.update(projection,projection,1920,1080,0,0,0,quality,nearDetail);
             glUniformMatrix4fv(0,false,projection.get(new float[16]));
             glUniform1f(4,cpu.minScreenArea); glUniform1f(5,cpu.invP00); glUniform1f(6,cpu.invP11);
             glUniform1f(7,cpu.stretchMax); glUniform1f(8,cpu.fullDetailDistanceSquared);
@@ -168,7 +171,7 @@ public final class TerrainLodGpuVerification {
                     "Native GPU/CPU subdivision mismatch: node="+i+", fov="+fov+", quality="+quality);
         }
         glDeleteProgram(program); glDeleteBuffers(input); glDeleteBuffers(output);
-        System.out.println("Native screenspace.glsl and CPU section selection agree on 65536 cases");
+        System.out.println("Native screenspace.glsl and CPU section selection agree on 131072 cases");
     }
 
     private static void verifyQuadFormat(boolean wide) throws IOException {

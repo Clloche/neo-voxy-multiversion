@@ -1,9 +1,7 @@
 package me.cortex.voxy.client.compat.create;
 
-import me.cortex.voxy.client.config.VoxyConfig;
 import me.cortex.voxy.client.core.rendering.Viewport;
 import me.cortex.voxy.client.core.rendering.NativeLodSelection;
-import net.minecraft.client.Minecraft;
 import org.joml.Matrix4fc;
 import java.nio.ByteBuffer;
 
@@ -53,18 +51,10 @@ public final class DistantMesh {
 
     public static long submittedTriangles, fullDetailTriangles;
     public static int coarseDraws, detailedDraws;
-    private static double visibilityBudget = .5, fullDetailDistance;
 
     public static void beginFrame() {
-        beginFrame(VoxyConfig.CONFIG.subDivisionSize,
-                (Minecraft.getInstance().options.getEffectiveRenderDistance() + 2) * 16.0);
-    }
-
-    static void beginFrame(float subdivision, double nearDetail) {
         submittedTriangles = fullDetailTriangles = 0;
         coarseDraws = detailedDraws = 0;
-        visibilityBudget = DistantMeshLod.visibilityPixels(subdivision);
-        fullDetailDistance = nearDetail;
     }
 
     public int lastDrawLevel() { return this.lastDrawLevel; }
@@ -205,22 +195,22 @@ public final class DistantMesh {
     }
 
     public void drawTranslucent(Viewport<?> viewport, Matrix4fc transform) {
-        this.drawTranslucent(transform, viewport.width, viewport.height);
+        this.drawTranslucent(viewport.lodSelection, transform, viewport.width, viewport.height);
     }
 
-    void drawTranslucent(Matrix4fc transform, int width, int height) {
+    void drawTranslucent(NativeLodSelection selection, Matrix4fc transform, int width, int height) {
         // 半透明层保留原有面数与顺序，只跳过整体小于一个像素的网格。
-        if (!this.skipSubpixel(transform, width, height)) this.draw();
+        if (!this.skipSubpixel(selection, transform, width, height)) this.draw();
     }
 
     public void drawThin(Viewport<?> viewport, Matrix4fc transform, double x, double y, double z) {
-        if (!this.skipSubpixel(transform, viewport.width, viewport.height)) this.drawAt(viewport, x, y, z);
+        if (!this.skipSubpixel(viewport.lodSelection, transform, viewport.width, viewport.height)) this.drawAt(viewport, x, y, z);
     }
 
-    private boolean skipSubpixel(Matrix4fc transform, int width, int height) {
+    private boolean skipSubpixel(NativeLodSelection selection, Matrix4fc transform, int width, int height) {
         if (DistantMeshLod.isSubpixel(transform, this.minX, this.minY, this.minZ,
                 this.maxX, this.maxY, this.maxZ, width, height,
-                visibilityBudget, fullDetailDistance)) {
+                selection.visibilityPixels, selection.fullDetailDistance)) {
             fullDetailTriangles += this.quadCount * 2L;
             return true;
         }

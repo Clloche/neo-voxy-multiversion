@@ -19,6 +19,8 @@ public final class NativeLodSelection {
     private int minX, minY, minZ, maxX, maxY, maxZ;
     private boolean valid;
     public float minScreenArea, fullDetailDistanceSquared, invP00, invP11, stretchMax;
+    public float fullDetailDistance;
+    public double visibilityPixels;
     public int evaluations, cacheHits;
 
     public void update(Matrix4fc mvp, Matrix4fc projection, int width, int height,
@@ -33,6 +35,8 @@ public final class NativeLodSelection {
         this.view.set(mvp, width, height, subdivision, fullDetailDistance);
         this.minScreenArea = subdivision * subdivision / (width * (float) height);
         this.fullDetailDistanceSquared = fullDetailDistance * fullDetailDistance;
+        this.fullDetailDistance = fullDetailDistance;
+        this.visibilityPixels = visibilityPixels(subdivision);
         this.invP00 = invP00; this.invP11 = invP11;
         this.stretchMax = (float) Math.pow(1.0 + (double) invP00 * invP00 + (double) invP11 * invP11, 1.5);
         this.valid = width > 0 && height > 0 && Float.isFinite(this.minScreenArea) && this.minScreenArea > 0
@@ -67,6 +71,11 @@ public final class NativeLodSelection {
 
     public int revision() {
         return this.generation;
+    }
+
+    public static double visibilityPixels(float subdivision) {
+        if (!Float.isFinite(subdivision) || subdivision <= 0) subdivision = 256;
+        return Math.clamp(Math.sqrt(subdivision / 256.0) * 0.5, 0.125, 1.0);
     }
 
     public int level(double x0, double y0, double z0, double x1, double y1, double z1) {
