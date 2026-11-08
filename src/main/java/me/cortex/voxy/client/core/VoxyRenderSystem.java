@@ -310,6 +310,26 @@ public class VoxyRenderSystem {
                 && (living.hasEffect(MobEffects.BLINDNESS)
                     || living.hasEffect(MobEffects.DARKNESS));
     }
+    // True when the terrain fog set by vanilla/other mods is closer than the render distance
+    // (Dynamic Surroundings swamp/morning fog, thick fog...). Voxy then keeps that fog and
+    // applies it to the LODs too.
+    private static volatile boolean externalFogActive;
+    public static void setExternalFogActive(boolean active) {
+        externalFogActive = active;
+    }
+    public static boolean externalFogActive() {
+        return externalFogActive;
+    }
+
+    // Set by another mod (e.g. Nostalgic Islands during its fog transition) whose fog must reach the LODs even when
+    // it ends at the render distance. Voxy then treats the current terrain fog as external.
+    private static volatile boolean externalFogForced;
+    public static void forceExternalFog(boolean forced) {
+        externalFogForced = forced;
+    }
+    public static boolean externalFogForced() {
+        return externalFogForced;
+    }
 
     private static volatile float lastRenderFogEnd = -1;
     private static volatile float lastRenderVanillaFar = -1;

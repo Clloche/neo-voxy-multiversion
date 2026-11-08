@@ -17,7 +17,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import com.mojang.blaze3d.systems.RenderSystem;
 
-@Mixin(value = FogRenderer.class, remap = true)
+@Mixin(value = FogRenderer.class, remap = true, priority = 2000)
 public class MixinFogRenderer {
     @Inject(
         method = "setupFog(Lnet/minecraft/client/Camera;Lnet/minecraft/client/renderer/FogRenderer$FogMode;FZF)V",
@@ -42,6 +42,31 @@ public class MixinFogRenderer {
         }
 
         if (RenderSystem.getShaderFogEnd() < 10.0f) return;
+
+        // Another mod (e.g. Dynamic Surroundings biome/morning fog) pulled the fog in closer than
+        // vanilla's fog, or asked for its fog to reach the LODs (VoxyRenderSystem.forceExternalFog). With Sable installed, Voxy extends the frame render distance, so that mod
+        // scaled a far-away fog: re-apply the same ratio to the real chunk render distance.
+        float curStart = RenderSystem.getShaderFogStart();
+        float curEnd = RenderSystem.getShaderFogEnd();
+        boolean externalFog = fogMode == FogMode.FOG_TERRAIN && !thickFog
+                && (curEnd < viewDistance * 0.97f
+                    || me.cortex.voxy.client.core.VoxyRenderSystem.externalFogForced());
+        if (fogMode == FogMode.FOG_TERRAIN) {
+            me.cortex.voxy.client.core.VoxyRenderSystem.setExternalFogActive(externalFog);
+        }
+        if (externalFog) {
+            float realFar = Math.min(viewDistance,
+                    net.minecraft.client.Minecraft.getInstance().options.getEffectiveRenderDistance() * 16.0f);
+            float vanillaStart = viewDistance - net.minecraft.util.Mth.clamp(viewDistance / 10.0f, 4.0f, 64.0f);
+            float realStart = realFar - net.minecraft.util.Mth.clamp(realFar / 10.0f, 4.0f, 64.0f);
+            float endRatio = curEnd / viewDistance;
+            float startRatio = vanillaStart > 0 ? curStart / vanillaStart : endRatio;
+            float newEnd = realFar * endRatio;
+            float newStart = Math.min(realStart * startRatio, newEnd - 1.0f);
+            RenderSystem.setShaderFogStart(Math.max(0.0f, newStart));
+            RenderSystem.setShaderFogEnd(newEnd);
+            return;
+        }
 
         // Adjust sky fog so it always looks smooth and doesn't change with render distance
         if (fogMode == FogMode.FOG_SKY) {
