@@ -119,7 +119,21 @@ public class NormalRenderPipeline extends AbstractRenderPipeline {
                         != net.minecraft.world.level.material.FogType.NONE
                     || VoxyRenderSystem.externalFogActive())
                 && mediumFar > mediumNear;
-        if (inMedium) {
+        float island = VoxyRenderSystem.islandFogWeight();
+        if (island > 0.0f && !inMedium && mediumFar > mediumNear) {
+            // Island fog blend: the terrain ramp (already eased in from the LOD radius) at full strength, with the
+            // ambient intensity/density/curve fading into the linear medium ramp so nothing jumps at the border.
+            float[] fogColor = RenderSystem.getShaderFogColor();
+            float envIntensity = VoxyConfig.CONFIG.useEnvironmentalFog
+                    ? Math.clamp(VoxyConfig.CONFIG.fogIntensity, 0.0f, 1.0f) : 0.0f;
+            float envDensity = Math.clamp(VoxyConfig.CONFIG.fogDensity, 0.0f, 1.0f);
+            glUniform2f(4, mediumNear, mediumFar);
+            glUniform4f(5, fogColor[0], fogColor[1], fogColor[2], 1.0f);
+            glUniform1i(6, RenderSystem.getShaderFogShape().getIndex());
+            glUniform1f(7, net.minecraft.util.Mth.lerp(island, envIntensity, 1.0f));
+            glUniform1f(8, net.minecraft.util.Mth.lerp(island, envDensity, 0.0f));
+            glUniform1f(9, island);
+        } else if (inMedium) {
             float[] fogColor = RenderSystem.getShaderFogColor();
             glUniform2f(4, mediumNear, mediumFar);
             glUniform4f(5, fogColor[0], fogColor[1], fogColor[2], 1.0f);
@@ -128,7 +142,7 @@ public class NormalRenderPipeline extends AbstractRenderPipeline {
             //open-air band and must not soften a medium that is meant to cut vision off.
             glUniform1f(7, 1.0f);
             glUniform1f(8, 0.0f);
-            glUniform1i(9, 1);
+            glUniform1f(9, 1.0f);
         } else if (VoxyConfig.CONFIG.useEnvironmentalFog && VoxyConfig.CONFIG.fogIntensity > 0.0f) {
             float[] fogColor = RenderSystem.getShaderFogColor();
             // The percentage shown in the UI is relative to the actual LOD radius.
@@ -141,14 +155,14 @@ public class NormalRenderPipeline extends AbstractRenderPipeline {
                 glUniform1i(6, RenderSystem.getShaderFogShape().getIndex());
                 glUniform1f(7, Math.clamp(VoxyConfig.CONFIG.fogIntensity, 0.0f, 1.0f));
                 glUniform1f(8, Math.clamp(VoxyConfig.CONFIG.fogDensity, 0.0f, 1.0f));
-                glUniform1i(9, 0);
+                glUniform1f(9, 0.0f);
             } else {
                 glUniform2f(4, 0, 0);
                 glUniform4f(5, 0, 0, 0, 0);
                 glUniform1i(6, 0);
                 glUniform1f(7, 0);
                 glUniform1f(8, 0);
-                glUniform1i(9, 0);
+                glUniform1f(9, 0.0f);
             }
         } else {
             glUniform2f(4, 0, 0);

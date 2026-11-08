@@ -43,6 +43,25 @@ public class MixinFogRenderer {
 
         if (RenderSystem.getShaderFogEnd() < 10.0f) return;
 
+        // Nostalgic Islands (or any mod pushing an island fog weight) owns the fog: keep its absolute distances,
+        // skip the Sable rescale and the sky override, and ease the terrain fog in from the LOD radius.
+        float island = me.cortex.voxy.client.core.VoxyRenderSystem.islandFogWeight();
+        if (island > 0.0f && !me.cortex.voxy.client.core.VoxyRenderSystem.restrictingMediumPresent()) {
+            if (fogMode == FogMode.FOG_TERRAIN) {
+                me.cortex.voxy.client.core.VoxyRenderSystem.setExternalFogActive(false);
+                float baseFar = me.cortex.voxy.client.core.VoxyRenderSystem.islandFogBaselineFar();
+                float end = RenderSystem.getShaderFogEnd();
+                if (end > 1.0f && baseFar > end) {
+                    float newEnd = me.cortex.voxy.client.core.VoxyRenderSystem.geoLerp(baseFar, end, island);
+                    float newStart = me.cortex.voxy.client.core.VoxyRenderSystem.geoLerp(
+                            baseFar * 0.5f, Math.max(RenderSystem.getShaderFogStart(), 1.0f), island);
+                    RenderSystem.setShaderFogStart(Math.max(0.0f, Math.min(newStart, newEnd - 1.0f)));
+                    RenderSystem.setShaderFogEnd(newEnd);
+                }
+            }
+            return;
+        }
+
         // Another mod (e.g. Dynamic Surroundings biome/morning fog) pulled the fog in closer than
         // vanilla's fog, or asked for its fog to reach the LODs (VoxyRenderSystem.forceExternalFog). With Sable installed, Voxy extends the frame render distance, so that mod
         // scaled a far-away fog: re-apply the same ratio to the real chunk render distance.

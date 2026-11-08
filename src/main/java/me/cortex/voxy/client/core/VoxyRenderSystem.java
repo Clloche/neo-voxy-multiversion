@@ -331,6 +331,29 @@ public class VoxyRenderSystem {
         return externalFogForced;
     }
 
+    // Island fog blend in [0, 1], pushed every client tick by Nostalgic Islands (0 = no island fog, 1 = full island fog).
+    // While it is above zero the terrain fog and the LOD fog share one ramp that moves geometrically from the
+    // LOD radius (no visible fog) to the other mod's distances, so LODs fade out with the terrain instead of popping.
+    // The owner must reset it to 0 when the effect ends.
+    private static volatile float islandFogWeight;
+    public static void setIslandFogWeight(float weight) {
+        islandFogWeight = Float.isNaN(weight) ? 0.0f : Math.clamp(weight, 0.0f, 1.0f);
+    }
+    public static float islandFogWeight() {
+        return islandFogWeight;
+    }
+
+    /** Far end of the ambient LOD fog ramp, in blocks: the distance at which the island blend starts from. */
+    public static float islandFogBaselineFar() {
+        return VoxyConfig.CONFIG.getFarEntityRenderDistanceBlocks() * (VoxyConfig.CONFIG.fogDistancePercent / 100.0f);
+    }
+
+    /** Geometric interpolation, so a distance dropping from thousands of blocks to ~100 progresses evenly. */
+    public static float geoLerp(float from, float to, float t) {
+        if (!(from > 0.0f) || !(to > 0.0f)) return to;
+        return from * (float) Math.pow(to / from, t);
+    }
+
     private static volatile float lastRenderFogEnd = -1;
     private static volatile float lastRenderVanillaFar = -1;
     private static volatile boolean lastRenderSkipped;
@@ -395,6 +418,10 @@ public class VoxyRenderSystem {
         lastRenderVanillaFar = viewDistance;
         // 原版视距明显小于玩家正常视距时，LOD 才不再补充远景。
         boolean skip = restricted < viewDistance * 0.9f;
+        // Fully inside an island fog that ends well inside the render distance: LODs are completely fogged out.
+        if (!skip && islandFogWeight >= 0.999f && RenderSystem.getShaderFogEnd() < viewDistance * 0.9f) {
+            skip = true;
+        }
         lastRenderSkipped = skip;
         return skip;
     }

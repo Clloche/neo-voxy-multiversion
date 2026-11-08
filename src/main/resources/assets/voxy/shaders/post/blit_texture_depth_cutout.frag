@@ -12,7 +12,7 @@ layout(location = 5) uniform vec4 fogColor;
 layout(location = 6) uniform int fogShape;
 layout(location = 7) uniform float fogIntensity;
 layout(location = 8) uniform float fogDensity;
-layout(location = 9) uniform int linearFog;
+layout(location = 9) uniform float linearFog;//0=smoothstep ramp, 1=linear ramp, in between = blend
 #endif
 #endif
 
@@ -67,7 +67,7 @@ void main() {
         float linearAmount = clamp((dist - fogParams.x) / max(fogParams.y - fogParams.x, 0.0001), 0.0, 1.0);
         //smoothstep(a,b,d) is by definition smoothstep(0,1,clamp((d-a)/(b-a))), so the ambient branch is
         //unchanged bit for bit.
-        float fogLerp = linearFog != 0 ? linearAmount : smoothstep(0.0, 1.0, linearAmount);
+        float fogLerp = mix(smoothstep(0.0, 1.0, linearAmount), linearAmount, clamp(linearFog, 0.0, 1.0));
         if (fogDensity > 0.0) fogLerp = (exp(fogDensity * fogLerp) - 1.0) / (exp(fogDensity) - 1.0);
         colour.rgb = mix(colour.rgb, fogColor.rgb, clamp(fogLerp * fogIntensity, 0.0, 1.0));
     }
